@@ -105,12 +105,14 @@ def draw_routes(matrix, canvas, font, results, best_name):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
-    y = 10  # First row baseline
+    white = graphics.Color(255, 255, 255)
+
+    y = 1  # First row baseline
     for name, total_min, leave_in, rgb in results:
         label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
 
-        color = graphics.Color(rgb[0], rgb[1], rgb[2])
+        color = graphics.Color(rgb[0], rgb[1], rgb[2]) if is_best else white
         star = "*" if is_best else ""
         text = f"{label} {total_min:.0f}m {leave_in:.0f}m{star}"
 
