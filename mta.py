@@ -97,14 +97,8 @@ def setup_matrix(config):
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
-    # Use 6x10 font - should be in /usr/share/fonts/misc/ or rpi-rgb-led-matrix/fonts/
-    font_path = Path(__file__).parent / "6x10.bdf"
-    if not font_path.exists():
-        font_path = Path("/usr/share/fonts/X11/misc/6x10.pcf.gz")
-    if not font_path.exists():
-        # Try the library's fonts directory
-        font_path = Path.home() / "rpi-rgb-led-matrix/fonts/6x10.bdf"
-    font.LoadFont(str(font_path))
+    font_path = "./6x10.bdf"
+    font.LoadFont(font_path)
 
     return matrix, font
 
