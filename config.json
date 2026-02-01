@@ -7,7 +7,8 @@
       "origin_stop": "234N",
       "dest_stop": "228N",
       "walk_to_station_min": 5,
-      "walk_to_office_min": 6
+      "walk_to_office_min": 6,
+      "color": [255, 0, 0]
     },
     {
       "name": "4/5 from Nevins → Fulton",
@@ -15,7 +16,8 @@
       "origin_stop": "234N",
       "dest_stop": "418N",
       "walk_to_station_min": 5,
-      "walk_to_office_min": 4
+      "walk_to_office_min": 4,
+      "color": [0, 255, 0]
     },
     {
       "name": "A/C from Hoyt → Fulton",
@@ -23,7 +25,8 @@
       "origin_stop": "A42N",
       "dest_stop": "A38N",
       "walk_to_station_min": 7,
-      "walk_to_office_min": 5
+      "walk_to_office_min": 5,
+      "color": [0, 0, 255]
     }
   ]
 }
