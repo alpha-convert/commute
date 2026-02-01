@@ -1,0 +1,29 @@
+{
+  "poll_interval_seconds": 30,
+  "routes": [
+    {
+      "name": "2/3 from Nevins → Park Pl",
+      "feed_id": "gtfs",
+      "origin_stop": "234N",
+      "dest_stop": "228N",
+      "walk_to_station_min": 5,
+      "walk_to_office_min": 6
+    },
+    {
+      "name": "4/5 from Nevins → Fulton",
+      "feed_id": "gtfs",
+      "origin_stop": "234N",
+      "dest_stop": "418N",
+      "walk_to_station_min": 5,
+      "walk_to_office_min": 4
+    },
+    {
+      "name": "A/C from Hoyt → Fulton",
+      "feed_id": "gtfs-ace",
+      "origin_stop": "A42N",
+      "dest_stop": "A38N",
+      "walk_to_station_min": 7,
+      "walk_to_office_min": 5
+    }
+  ]
+}
