@@ -101,18 +101,29 @@ def setup_matrix(config):
     return matrix, font
 
 
+# Cache colors to avoid recreating them each frame
+_color_cache = {}
+
+def get_color(rgb):
+    """Get or create a cached color."""
+    key = tuple(rgb)
+    if key not in _color_cache:
+        _color_cache[key] = graphics.Color(rgb[0], rgb[1], rgb[2])
+    return _color_cache[key]
+
+
 def draw_routes(matrix, canvas, font, results, best_name):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
-    white = graphics.Color(255, 255, 255)
+    white = get_color([255, 255, 255])
 
     y = 10  # First row baseline
     for name, total_min, leave_in, rgb in results:
         label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
 
-        color = graphics.Color(rgb[0], rgb[1], rgb[2]) if is_best else white
+        color = get_color(rgb) if is_best else white
         star = "*" if is_best else ""
         text = f"{label} {total_min:.0f}m {leave_in:.0f}m{star}"
 
