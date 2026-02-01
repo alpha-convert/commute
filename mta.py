@@ -2,13 +2,9 @@
 """MTA Train Routing - Find the fastest train to work."""
 
 import json
-import os
 import time
 from datetime import datetime
 from pathlib import Path
-
-# Use system CA certs (avoids permission issues with sudo)
-os.environ.setdefault("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-certificates.crt")
 
 import requests
 from google.transit import gtfs_realtime_pb2
@@ -63,16 +59,10 @@ def find_trips_for_route(feed, origin_stop, dest_stop):
             stop_id = stop_time.stop_id
 
             if stop_id == origin_stop:
-                if stop_time.HasField("departure"):
-                    origin_time = stop_time.departure.time
-                elif stop_time.HasField("arrival"):
-                    origin_time = stop_time.arrival.time
+                origin_time = stop_time.departure.time
 
             elif stop_id == dest_stop:
-                if stop_time.HasField("arrival"):
-                    dest_time = stop_time.arrival.time
-                elif stop_time.HasField("departure"):
-                    dest_time = stop_time.departure.time
+                dest_time = stop_time.arrival.time
 
         if origin_time and dest_time and origin_time < dest_time:
             trips.append({
@@ -101,7 +91,7 @@ def setup_matrix(config):
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
-    font_path = "./6x10.bdf"
+    font_path = "./6x10.bdf")
     font.LoadFont(font_path)
 
     return matrix, font
