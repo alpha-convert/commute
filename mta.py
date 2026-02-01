@@ -2,9 +2,13 @@
 """MTA Train Routing - Find the fastest train to work."""
 
 import json
+import os
 import time
 from datetime import datetime
 from pathlib import Path
+
+# Use system CA certs (avoids permission issues with sudo)
+os.environ.setdefault("REQUESTS_CA_BUNDLE", "/etc/ssl/certs/ca-certificates.crt")
 
 import requests
 from google.transit import gtfs_realtime_pb2
