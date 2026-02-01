@@ -59,7 +59,7 @@ def find_trips_for_route(feed, origin_stop, dest_stop):
             stop_id = stop_time.stop_id
 
             if stop_id == origin_stop:
-                origin_time = stop_time.departure.time
+                origin_time = stop_time.arrival.time
 
             elif stop_id == dest_stop:
                 dest_time = stop_time.arrival.time
@@ -91,7 +91,7 @@ def setup_matrix(config):
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
-    font_path = "./6x10.bdf")
+    font_path = "./6x10.bdf"
     font.LoadFont(font_path)
 
     return matrix, font
