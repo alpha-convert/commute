@@ -93,6 +93,7 @@ def setup_matrix(config):
     options.cols = config.get("led_cols", 64)
     options.gpio_slowdown = config.get("led_gpio_slowdown", 2)
     options.hardware_mapping = "regular"
+    options.disable_hardware_pulsing = True
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
