@@ -107,7 +107,7 @@ def draw_routes(matrix, canvas, font, results, best_name):
 
     white = graphics.Color(255, 255, 255)
 
-    y = 1  # First row baseline
+    y = 10  # First row baseline
     for name, total_min, leave_in, rgb in results:
         label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
