@@ -105,15 +105,12 @@ def draw_routes(matrix, canvas, font, results, best_name):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
-    white = graphics.Color(255, 255, 255)
-    green = graphics.Color(0, 255, 0)
-
     y = 10  # First row baseline
-    for name, total_min, leave_in in results:
+    for name, total_min, leave_in, rgb in results:
         label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
 
-        color = green if is_best else white
+        color = graphics.Color(rgb[0], rgb[1], rgb[2])
         star = "*" if is_best else ""
         text = f"{label} {total_min:.0f}m {leave_in:.0f}m{star}"
 
@@ -149,7 +146,7 @@ def main():
         best_option = None
         best_arrival = float("inf")
         best_leave_in = None
-        results = []  # (name, total_min, leave_in) for each route
+        results = []  # (name, total_min, leave_in, color) for each route
 
         for route in config["routes"]:
             feed_id = route["feed_id"]
@@ -170,7 +167,7 @@ def main():
 
             if not catchable:
                 print(f"{route['name']}: No trains")
-                results.append((route["name"], 99, 99))  # Show 99 for no trains
+                results.append((route["name"], 99, 99, route.get("color", [255, 255, 255])))
                 continue
 
             walk_to_office = route["walk_to_office_min"] * 60
@@ -185,7 +182,7 @@ def main():
             arrive_str = format_time(arrival_at_office)
             print(f"{route['name']}: Leave in {leave_in:.0f}m, Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
 
-            results.append((route["name"], total_time, leave_in))
+            results.append((route["name"], total_time, leave_in, route.get("color", [255, 255, 255])))
 
             if arrival_at_office < best_arrival:
                 best_arrival = arrival_at_office
