@@ -109,14 +109,13 @@ def draw_routes(matrix, canvas, font, results, best_name):
     green = graphics.Color(0, 255, 0)
 
     y = 10  # First row baseline
-    for name, minutes in results:
+    for name, total_min, leave_in in results:
         label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
 
         color = green if is_best else white
-        text = f"{label} {minutes:.0f}m"
-        if is_best:
-            text += " *"
+        star = "*" if is_best else ""
+        text = f"{label} {total_min:.0f}m {leave_in:.0f}m{star}"
 
         graphics.DrawText(canvas, font, 1, y, color, text)
         y += 11  # Next row
@@ -149,7 +148,8 @@ def main():
 
         best_option = None
         best_arrival = float("inf")
-        results = []  # (name, minutes) for each route
+        best_leave_in = None
+        results = []  # (name, total_min, leave_in) for each route
 
         for route in config["routes"]:
             feed_id = route["feed_id"]
@@ -170,20 +170,22 @@ def main():
 
             if not catchable:
                 print(f"{route['name']}: No trains")
-                results.append((route["name"], 99))  # Show 99 for no trains
+                results.append((route["name"], 99, 99))  # Show 99 for no trains
                 continue
 
             walk_to_office = route["walk_to_office_min"] * 60
-            best_trip = min(catchable, key=lambda t: t["origin_time"])
+            first_trip = min(catchable, key=lambda t: t["origin_time"])
 
-            arrival_at_office = best_trip["dest_time"] + walk_to_office
+            arrival_at_office = first_trip["dest_time"] + walk_to_office
             total_time = (arrival_at_office - now) / 60
 
-            board_str = format_time(best_trip["origin_time"])
-            arrive_str = format_time(arrival_at_office)
-            print(f"{route['name']}: Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
+            leave_in = (first_trip["origin_time"] - walk_to_station - now) / 60
 
-            results.append((route["name"], total_time))
+            board_str = format_time(first_trip["origin_time"])
+            arrive_str = format_time(arrival_at_office)
+            print(f"{route['name']}: Leave in {leave_in:.0f}m, Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
+
+            results.append((route["name"], total_time, leave_in))
 
             if arrival_at_office < best_arrival:
                 best_arrival = arrival_at_office
@@ -191,7 +193,7 @@ def main():
 
         if best_option:
             total_min = (best_arrival - now) / 60
-            print(f"\nBEST: {best_option} ({total_min:.0f} min)")
+            print(f"\nBEST: {best_option} (Total time: {total_min:.0f} min)")
 
         # Update LED matrix
         if matrix and results:
