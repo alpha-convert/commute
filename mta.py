@@ -9,8 +9,22 @@ from pathlib import Path
 import requests
 from google.transit import gtfs_realtime_pb2
 
+# Try to import LED matrix library (only works on Pi)
+try:
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
+    HAS_MATRIX = True
+except ImportError:
+    HAS_MATRIX = False
+
 CONFIG_PATH = Path(__file__).parent / "config.json"
 FEED_BASE_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2F"
+
+# Short labels for display
+ROUTE_LABELS = {
+    "2/3 from Nevins → Park Pl": "2/3",
+    "4/5 from Nevins → Fulton": "4/5",
+    "A/C from Hoyt → Fulton": "A/C",
+}
 
 
 def load_config():
@@ -45,20 +59,17 @@ def find_trips_for_route(feed, origin_stop, dest_stop):
             stop_id = stop_time.stop_id
 
             if stop_id == origin_stop:
-                # Use departure time at origin (when we board)
                 if stop_time.HasField("departure"):
                     origin_time = stop_time.departure.time
                 elif stop_time.HasField("arrival"):
                     origin_time = stop_time.arrival.time
 
             elif stop_id == dest_stop:
-                # Use arrival time at destination
                 if stop_time.HasField("arrival"):
                     dest_time = stop_time.arrival.time
                 elif stop_time.HasField("departure"):
                     dest_time = stop_time.departure.time
 
-        # Only include trips that serve both stops
         if origin_time and dest_time and origin_time < dest_time:
             trips.append({
                 "trip_id": trip_update.trip.trip_id,
@@ -75,11 +86,66 @@ def format_time(unix_ts):
     return datetime.fromtimestamp(unix_ts).strftime("%H:%M")
 
 
+def setup_matrix(config):
+    """Initialize the LED matrix."""
+    options = RGBMatrixOptions()
+    options.rows = config.get("led_rows", 32)
+    options.cols = config.get("led_cols", 64)
+    options.gpio_slowdown = config.get("led_gpio_slowdown", 2)
+    options.hardware_mapping = "regular"
+
+    matrix = RGBMatrix(options=options)
+    font = graphics.Font()
+    # Use 6x10 font - should be in /usr/share/fonts/misc/ or rpi-rgb-led-matrix/fonts/
+    font_path = Path(__file__).parent / "6x10.bdf"
+    if not font_path.exists():
+        font_path = Path("/usr/share/fonts/X11/misc/6x10.pcf.gz")
+    if not font_path.exists():
+        # Try the library's fonts directory
+        font_path = Path.home() / "rpi-rgb-led-matrix/fonts/6x10.bdf"
+    font.LoadFont(str(font_path))
+
+    return matrix, font
+
+
+def draw_routes(matrix, canvas, font, results, best_name):
+    """Draw route info on the LED matrix."""
+    canvas.Clear()
+
+    white = graphics.Color(255, 255, 255)
+    green = graphics.Color(0, 255, 0)
+
+    y = 10  # First row baseline
+    for name, minutes in results:
+        label = ROUTE_LABELS.get(name, name[:3])
+        is_best = (name == best_name)
+
+        color = green if is_best else white
+        text = f"{label} {minutes:.0f}m"
+        if is_best:
+            text += " *"
+
+        graphics.DrawText(canvas, font, 1, y, color, text)
+        y += 11  # Next row
+
+    return matrix.SwapOnVSync(canvas)
+
+
 def main():
     config = load_config()
     poll_interval = config["poll_interval_seconds"]
 
-    # Cache feeds to avoid duplicate requests for same feed_id
+    # Setup LED matrix if available
+    matrix = None
+    canvas = None
+    font = None
+    if HAS_MATRIX:
+        matrix, font = setup_matrix(config)
+        canvas = matrix.CreateFrameCanvas()
+        print("LED matrix initialized")
+    else:
+        print("Running in CLI mode (no LED matrix)")
+
     feed_cache = {}
 
     while True:
@@ -90,52 +156,53 @@ def main():
 
         best_option = None
         best_arrival = float("inf")
+        results = []  # (name, minutes) for each route
 
         for route in config["routes"]:
             feed_id = route["feed_id"]
 
-            # Fetch feed (with caching)
             if feed_id not in feed_cache:
                 try:
                     feed_cache[feed_id] = fetch_feed(feed_id)
                 except Exception as e:
-                    print(f"{route['name']}: Error fetching feed - {e}")
+                    print(f"{route['name']}: Error - {e}")
                     continue
 
             feed = feed_cache[feed_id]
             trips = find_trips_for_route(feed, route["origin_stop"], route["dest_stop"])
 
-            # Filter to catchable trains
             walk_to_station = route["walk_to_station_min"] * 60
             earliest_board = now + walk_to_station
-
             catchable = [t for t in trips if t["origin_time"] >= earliest_board]
 
             if not catchable:
-                print(f"{route['name']}: No upcoming trains")
+                print(f"{route['name']}: No trains")
+                results.append((route["name"], 99))  # Show 99 for no trains
                 continue
 
-            # Find best trip for this route
             walk_to_office = route["walk_to_office_min"] * 60
+            best_trip = min(catchable, key=lambda t: t["origin_time"])
 
-            for trip in sorted(catchable, key=lambda t: t["origin_time"]):
-                arrival_at_office = trip["dest_time"] + walk_to_office
-                total_time = (arrival_at_office - now) / 60
+            arrival_at_office = best_trip["dest_time"] + walk_to_office
+            total_time = (arrival_at_office - now) / 60
 
-                board_str = format_time(trip["origin_time"])
-                arrive_str = format_time(arrival_at_office)
+            board_str = format_time(best_trip["origin_time"])
+            arrive_str = format_time(arrival_at_office)
+            print(f"{route['name']}: Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
 
-                print(f"{route['name']}: Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
+            results.append((route["name"], total_time))
 
-                if arrival_at_office < best_arrival:
-                    best_arrival = arrival_at_office
-                    best_option = route["name"]
-
-                break  # Only show best option per route
+            if arrival_at_office < best_arrival:
+                best_arrival = arrival_at_office
+                best_option = route["name"]
 
         if best_option:
             total_min = (best_arrival - now) / 60
             print(f"\nBEST: {best_option} ({total_min:.0f} min)")
+
+        # Update LED matrix
+        if matrix and results:
+            canvas = draw_routes(matrix, canvas, font, results, best_option)
 
         time.sleep(poll_interval)
 
