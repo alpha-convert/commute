@@ -100,10 +100,11 @@ def setup_matrix(config):
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
-    font_path = "./6x10.bdf"
+    font_path = config.get("led_font", "./4x6.bdf")
     font.LoadFont(font_path)
+    row_height = config.get("led_row_height", 7)
 
-    return matrix, font
+    return matrix, font, row_height
 
 
 # Cache colors to avoid recreating them each frame
@@ -117,19 +118,18 @@ def get_color(rgb):
     return _color_cache[key]
 
 
-def draw_routes(matrix, canvas, font, trips, best_name):
+def draw_routes(matrix, canvas, font, trips, best_name, row_height):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
-
-    y = 10  # First row baseline
+    y = row_height  # First row baseline
     for trip in trips:
         is_best = (trip.route_name == best_name)
 
         color = get_color(trip.color)
         text = f"{trip.route_name} {trip.total_min:.0f}m {trip.leave_in:.0f}m"
-        graphics.DrawText(canvas, font, 3, y, color, text)
-        y += 11  # Next row
+        graphics.DrawText(canvas, font, 1, y, color, text)
+        y += row_height
 
     return matrix.SwapOnVSync(canvas)
 
@@ -141,8 +141,9 @@ def main():
     matrix = None
     canvas = None
     font = None
+    row_height = 7
     if HAS_MATRIX:
-        matrix, font = setup_matrix(config)
+        matrix, font, row_height = setup_matrix(config)
         canvas = matrix.CreateFrameCanvas()
         print("LED matrix initialized")
     else:
@@ -181,6 +182,7 @@ def main():
                 continue
 
             walk_to_office = route["walk_to_office_min"] * 60
+            # TODO: the R is currently pink, oops.
             color = route.get("color", [255, 255, 255])
 
             for t in catchable:
@@ -207,9 +209,9 @@ def main():
         if best_option:
             print(f"\nBEST: {best_option}")
 
-        # Update LED matrix (show top 3)
+        # Update LED matrix (show top 4)
         if matrix and all_trips:
-            canvas = draw_routes(matrix, canvas, font, all_trips[:3], best_option)
+            canvas = draw_routes(matrix, canvas, font, all_trips[:4], best_option, row_height)
 
         time.sleep(poll_interval)
 
