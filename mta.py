@@ -97,6 +97,8 @@ def setup_matrix(config):
     options.brightness = config.get("led_brightness", 100)
     options.hardware_mapping = "regular"
     options.disable_hardware_pulsing = True
+    if config.get("led_rotate"):
+        options.pixel_mapper_config = f"Rotate:{config['led_rotate']}"
 
     matrix = RGBMatrix(options=options)
     font = graphics.Font()
@@ -127,7 +129,7 @@ def draw_routes(matrix, canvas, font, trips, best_name, row_height):
         is_best = (trip.route_name == best_name)
 
         color = get_color(trip.color)
-        text = f"{trip.route_name} {trip.total_min:.0f}m {trip.leave_in:.0f}m"
+        text = f"{trip.total_min:.0f} {trip.leave_in:.0f}"
         graphics.DrawText(canvas, font, 1, y, color, text)
         y += row_height
 
@@ -209,9 +211,9 @@ def main():
         if best_option:
             print(f"\nBEST: {best_option}")
 
-        # Update LED matrix (show top 4)
+        # Update LED matrix (show top 9 - fits 64px height with 7px rows)
         if matrix and all_trips:
-            canvas = draw_routes(matrix, canvas, font, all_trips[:4], best_option, row_height)
+            canvas = draw_routes(matrix, canvas, font, all_trips[:9], best_option, row_height)
 
         time.sleep(poll_interval)
 

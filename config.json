@@ -3,6 +3,7 @@
   "led_brightness": 50,
   "led_font": "./fonts/4x6.bdf",
   "led_row_height": 7,
+  "led_rotate": 90,
   "max_arrival_minutes": 60,
   "routes": [
     {
