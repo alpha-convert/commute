@@ -23,13 +23,6 @@ except ImportError:
 CONFIG_PATH = Path(__file__).parent / "config.json"
 FEED_BASE_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2F"
 
-# Short labels for display
-ROUTE_LABELS = {
-    "2/3 from Nevins → Park Pl": "2/3",
-    "4/5 from Nevins → Fulton": "4/5",
-    "A/C from Hoyt → Fulton": "A/C",
-}
-
 
 def load_config():
     with open(CONFIG_PATH) as f:
@@ -90,6 +83,7 @@ def setup_matrix(config):
     options.rows = config.get("led_rows", 32)
     options.cols = config.get("led_cols", 64)
     options.gpio_slowdown = config.get("led_gpio_slowdown", 2)
+    options.brightness = config.get("led_brightness", 100)
     options.hardware_mapping = "regular"
     options.disable_hardware_pulsing = True
 
@@ -120,11 +114,10 @@ def draw_routes(matrix, canvas, font, results, best_name):
 
     y = 10  # First row baseline
     for name, total_min, leave_in, rgb in results:
-        label = ROUTE_LABELS.get(name, name[:3])
         is_best = (name == best_name)
 
         color = get_color(rgb) if is_best else white
-        text = f"{label} {total_min:.0f}m {leave_in:.0f}m"
+        text = f"{name} {total_min:.0f}m {leave_in:.0f}m"
 
         graphics.DrawText(canvas, font, 3, y, color, text)
         y += 11  # Next row
@@ -158,16 +151,17 @@ def main():
         best_option = None
         best_arrival = float("inf")
         best_leave_in = None
-        results = []  # (name, total_min, leave_in, color) for each route
+        results = []  # (label, total_min, leave_in, color) for each route
 
         for route in config["routes"]:
             feed_id = route["feed_id"]
+            route_name = route["name"]
 
             if feed_id not in feed_cache:
                 try:
                     feed_cache[feed_id] = fetch_feed(feed_id)
                 except Exception as e:
-                    print(f"{route['name']}: Error - {e}")
+                    print(f"{route_name}: Error - {e}")
                     continue
 
             feed = feed_cache[feed_id]
@@ -178,27 +172,27 @@ def main():
             catchable = [t for t in trips if t["origin_time"] >= earliest_board]
 
             if not catchable:
-                print(f"{route['name']}: No trains")
-                results.append((route["name"], 99, 99, route.get("color", [255, 255, 255])))
+                print(f"{route_name}: No trains")
+                results.append((route_name, 99, 99, route.get("color", [255, 255, 255])))
                 continue
 
             walk_to_office = route["walk_to_office_min"] * 60
-            first_trip = min(catchable, key=lambda t: t["origin_time"])
+            earliest_catchable = min(catchable, key=lambda t: t["origin_time"])
 
-            arrival_at_office = first_trip["dest_time"] + walk_to_office
+            arrival_at_office = earliest_catchable["dest_time"] + walk_to_office
             total_time = (arrival_at_office - now) / 60
 
-            leave_in = (first_trip["origin_time"] - walk_to_station - now) / 60
+            leave_in = (earliest_catchable["origin_time"] - walk_to_station - now) / 60
 
-            board_str = format_time(first_trip["origin_time"])
+            board_str = format_time(earliest_catchable["origin_time"])
             arrive_str = format_time(arrival_at_office)
-            print(f"{route['name']}: Leave in {leave_in:.0f}m, Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
+            print(f"{route_name}: Leave in {leave_in:.0f}m, Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
 
-            results.append((route["name"], total_time, leave_in, route.get("color", [255, 255, 255])))
+            results.append((route_name, total_time, leave_in, route.get("color", [255, 255, 255])))
 
             if arrival_at_office < best_arrival:
                 best_arrival = arrival_at_office
-                best_option = route["name"]
+                best_option = route_name
 
         if best_option:
             total_min = (best_arrival - now) / 60
