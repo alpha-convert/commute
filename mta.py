@@ -126,7 +126,7 @@ def draw_routes(matrix, canvas, font, results, best_name):
         color = get_color(rgb) if is_best else white
         text = f"{label} {total_min:.0f}m {leave_in:.0f}m"
 
-        graphics.DrawText(canvas, font, 1, y, color, text)
+        graphics.DrawText(canvas, font, 3, y, color, text)
         y += 11  # Next row
 
     return matrix.SwapOnVSync(canvas)
