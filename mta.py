@@ -126,10 +126,8 @@ def draw_routes(matrix, canvas, font, trips, best_name, row_height):
 
     y = row_height  # First row baseline
     for trip in trips:
-        is_best = (trip.route_name == best_name)
-
         color = get_color(trip.color)
-        text = f"{trip.total_min:.0f} {trip.leave_in:.0f}"
+        text = f"{trip.name} {trip.total_min:.0f} {trip.leave_in:.0f}"
         graphics.DrawText(canvas, font, 1, y, color, text)
         y += row_height
 
