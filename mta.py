@@ -121,15 +121,13 @@ def draw_routes(matrix, canvas, font, trips, best_name):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
-    white = get_color([255, 255, 255])
 
     y = 10  # First row baseline
     for trip in trips:
         is_best = (trip.route_name == best_name)
 
-        color = get_color(trip.color) if is_best else white
+        color = get_color(trip.color)
         text = f"{trip.route_name} {trip.total_min:.0f}m {trip.leave_in:.0f}m"
-
         graphics.DrawText(canvas, font, 3, y, color, text)
         y += 11  # Next row
 
