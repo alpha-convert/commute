@@ -40,7 +40,7 @@
       "dest_stop": "R25N",
       "walk_to_station_min": 6,
       "walk_to_office_min": 9,
-      "color": [255, 255, 0]
+      "color": [0, 255, 255]
     }
   ]
 }
