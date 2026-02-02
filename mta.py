@@ -4,6 +4,7 @@
 import json
 import os
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -22,6 +23,17 @@ except ImportError:
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
 FEED_BASE_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2F"
+
+
+@dataclass
+class Trip:
+    route_name: str
+    arrival_at_office: float
+    total_min: float
+    leave_in: float
+    board_str: str
+    arrive_str: str
+    color: list
 
 
 def load_config():
@@ -105,18 +117,18 @@ def get_color(rgb):
     return _color_cache[key]
 
 
-def draw_routes(matrix, canvas, font, results, best_name):
+def draw_routes(matrix, canvas, font, trips, best_name):
     """Draw route info on the LED matrix."""
     canvas.Clear()
 
     white = get_color([255, 255, 255])
 
     y = 10  # First row baseline
-    for name, total_min, leave_in, rgb in results:
-        is_best = (name == best_name)
+    for trip in trips:
+        is_best = (trip.route_name == best_name)
 
-        color = get_color(rgb) if is_best else white
-        text = f"{name} {total_min:.0f}m {leave_in:.0f}m"
+        color = get_color(trip.color) if is_best else white
+        text = f"{trip.route_name} {trip.total_min:.0f}m {trip.leave_in:.0f}m"
 
         graphics.DrawText(canvas, font, 3, y, color, text)
         y += 11  # Next row
@@ -146,9 +158,7 @@ def main():
 
         print(f"\n=== {datetime.now().strftime('%H:%M:%S')} ===")
 
-        best_option = None
-        best_arrival = float("inf")
-        results = []  # (label, total_min, leave_in, color) for each route
+        all_trips = []
 
         for route in config["routes"]:
             feed_id = route["feed_id"]
@@ -162,42 +172,46 @@ def main():
                     continue
 
             feed = feed_cache[feed_id]
-            trips = find_trips_for_route(feed, route["origin_stop"], route["dest_stop"])
+            feed_trips = find_trips_for_route(feed, route["origin_stop"], route["dest_stop"])
 
             walk_to_station = route["walk_to_station_min"] * 60
             earliest_board = now + walk_to_station
-            catchable = [t for t in trips if t["origin_time"] >= earliest_board]
+            catchable = [t for t in feed_trips if t["origin_time"] >= earliest_board]
 
             if not catchable:
                 print(f"{route_name}: No trains")
-                results.append((route_name, 99, 99, route.get("color", [255, 255, 255])))
                 continue
 
             walk_to_office = route["walk_to_office_min"] * 60
-            earliest_catchable = min(catchable, key=lambda t: t["origin_time"])
+            color = route.get("color", [255, 255, 255])
 
-            arrival_at_office = earliest_catchable["dest_time"] + walk_to_office
-            total_time = (arrival_at_office - now) / 60
+            for t in catchable:
+                arrival_at_office = t["dest_time"] + walk_to_office
+                all_trips.append(Trip(
+                    route_name=route_name,
+                    arrival_at_office=arrival_at_office,
+                    total_min=(arrival_at_office - now) / 60,
+                    leave_in=(t["origin_time"] - walk_to_station - now) / 60,
+                    board_str=format_time(t["origin_time"]),
+                    arrive_str=format_time(arrival_at_office),
+                    color=color,
+                ))
 
-            leave_in = (earliest_catchable["origin_time"] - walk_to_station - now) / 60
+        # Sort by arrival time and filter by max arrival time
+        all_trips.sort(key=lambda t: t.arrival_at_office)
+        max_arrival_min = config.get("max_arrival_minutes", 60)
+        all_trips = [t for t in all_trips if t.total_min <= max_arrival_min]
 
-            board_str = format_time(earliest_catchable["origin_time"])
-            arrive_str = format_time(arrival_at_office)
-            print(f"{route_name}: Leave in {leave_in:.0f}m, Board {board_str} → Arrive {arrive_str} ({total_time:.0f} min)")
+        for trip in all_trips:
+            print(f"{trip.route_name}: Leave in {trip.leave_in:.0f}m, Board {trip.board_str} → Arrive {trip.arrive_str} ({trip.total_min:.0f} min)")
 
-            results.append((route_name, total_time, leave_in, route.get("color", [255, 255, 255])))
-
-            if arrival_at_office < best_arrival:
-                best_arrival = arrival_at_office
-                best_option = route_name
-
+        best_option = all_trips[0].route_name if all_trips else None
         if best_option:
-            total_min = (best_arrival - now) / 60
-            print(f"\nBEST: {best_option} (Total time: {total_min:.0f} min)")
+            print(f"\nBEST: {best_option}")
 
-        # Update LED matrix
-        if matrix and results:
-            canvas = draw_routes(matrix, canvas, font, results, best_option)
+        # Update LED matrix (show top 3)
+        if matrix and all_trips:
+            canvas = draw_routes(matrix, canvas, font, all_trips[:3], best_option)
 
         time.sleep(poll_interval)
 

@@ -1,6 +1,7 @@
 {
   "poll_interval_seconds": 30,
   "led_brightness": 50,
+  "max_arrival_minutes": 60,
   "routes": [
     {
       "name": "2/3",
