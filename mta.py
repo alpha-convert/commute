@@ -68,7 +68,6 @@ def find_trips_for_route(feed, origin_stop, dest_stop):
                 "origin_time": origin_time,
                 "dest_time": dest_time,
             })
-
     return trips
 
 
@@ -124,7 +123,6 @@ def draw_routes(matrix, canvas, font, results, best_name):
 
     return matrix.SwapOnVSync(canvas)
 
-
 def main():
     config = load_config()
     poll_interval = config["poll_interval_seconds"]
@@ -150,7 +148,6 @@ def main():
 
         best_option = None
         best_arrival = float("inf")
-        best_leave_in = None
         results = []  # (label, total_min, leave_in, color) for each route
 
         for route in config["routes"]:

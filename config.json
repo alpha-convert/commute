@@ -8,7 +8,7 @@
       "origin_stop": "234N",
       "dest_stop": "228N",
       "walk_to_station_min": 5,
-      "walk_to_office_min": 6,
+      "walk_to_office_min": 10,
       "color": [255, 0, 0]
     },
     {
@@ -17,7 +17,7 @@
       "origin_stop": "234N",
       "dest_stop": "418N",
       "walk_to_station_min": 5,
-      "walk_to_office_min": 4,
+      "walk_to_office_min": 11,
       "color": [0, 0, 255]
     },
     {
@@ -28,6 +28,15 @@
       "walk_to_station_min": 7,
       "walk_to_office_min": 5,
       "color": [0, 255, 0]
+    },
+    {
+      "name": "R",
+      "feed_id": "gtfs-nqrw",
+      "origin_stop": "R30N",
+      "dest_stop": "R25N",
+      "walk_to_station_min": 6,
+      "walk_to_office_min": 9,
+      "color": [255, 255, 0]
     }
   ]
 }
